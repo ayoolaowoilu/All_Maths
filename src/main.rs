@@ -1,4 +1,4 @@
-use crate::equations::{bodmas::calculate_bodmas, pemdas::calculate_pemdas};
+use crate::equations::{ pemdas::calculate_pemdas};
 use crate::utils::element_seperator::map_elements;
 
 mod equations;
@@ -17,6 +17,8 @@ fn main() {
  
 
    println!("Calculate : {} , answer is : {} " ,"-5 + 4*67y + 90 - 90+9/2", calculate_pemdas("-5 + 4*67 + 90 - 90+9/2 = 92").left);
+
+    println!("Calculate : {} , answer is : {} " ,"(6`-4)^(2/3)", calculate_pemdas("(6-4)^(2/3)").left);
 
 
 }
