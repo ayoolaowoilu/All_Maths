@@ -20,7 +20,7 @@ pub struct MappedEquation {
 }
 
 pub fn map_elements(equation: &str) -> MappedEquation {
-    let clean = equation.trim();
+    let clean = &parse_equation(equation.trim());
     
     if clean.starts_with('*') || clean.starts_with('/') {
         panic!("Equation cannot start with * or /");
@@ -130,12 +130,12 @@ pub fn identify_elements(equation: &str) -> Vec<Element> {
 
 
 pub fn parse_equation(data:&str)->String{
-    let mut line  = data.replace(" ", "");
-  let new_line =   line.replace("+", " +").replace("-", " -");
+    let line = data.replace(" ", "");
+    let new_line = line.replace("+", " +").replace("-", " -");
    
-  if line.starts_with("-") || line.starts_with("+"){
-    return new_line.to_string()[1..].to_string()
-  }else { 
-     new_line.to_string()
-  }
+    if line.starts_with("-") || line.starts_with("+"){
+        return new_line.to_string()[1..].to_string()
+    }
+
+    new_line.to_string()
 }
