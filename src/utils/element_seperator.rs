@@ -1,5 +1,12 @@
-pub const OPERATORS: [&str; 6] = ["+", "-", "*", "/", "=", "^"];
-pub const ELEMENT_TYPES: [&str; 8] = ["Variable", "Constant", "Operator", "Exponent", "Bracket" , "Power" , "Fraction" , "Multiplication"];
+pub const ELEMENT_TYPES: [&str; 7] = [
+    "Variable",       
+    "Constant",       
+    "Exponent",       
+    "Bracket",        
+    "Power",          
+    "Fraction",       
+    "Multiplication", 
+];
 
 pub struct Element {
     pub value: String,
@@ -13,7 +20,7 @@ pub struct MappedEquation {
 }
 
 pub fn map_elements(equation: &str) -> MappedEquation {
-    let clean = equation;
+    let clean = equation.trim();
     
     if clean.starts_with('*') || clean.starts_with('/') {
         panic!("Equation cannot start with * or /");
@@ -33,39 +40,102 @@ pub fn map_elements(equation: &str) -> MappedEquation {
         }
     } else {
         MappedEquation {
-            left_side: identify_elements(&clean),
+            left_side: identify_elements(clean),
             right_side: None,
             is_equation: false,
         }
     }
 }
 
+pub fn identify_elements(equation: &str) -> Vec<Element> {
+    let mut elements: Vec<Element> = Vec::new();
 
-pub fn identify_elements(equation:&str) -> Vec<Element> {
-     
-     let clean = equation;
-     let mut elements:Vec<Element> = Vec::new();
-     let data:Vec<&str> = clean.split_whitespace().collect();
-     
-     for el in data {
-
-        if el.starts_with("(") && el.ends_with(")") {
-             elements.push(Element { value: el.to_string(), element_type: ELEMENT_TYPES[4].to_string() });
+    for token in equation.split_whitespace() {
+        if token.is_empty() {
+            continue;
         }
-        
-         if el.contains("*") {
-            elements.push(Element { value: el.to_string(), element_type: ELEMENT_TYPES[7].to_string() });
-         }else if el.contains("/") {
-             elements.push(Element { value: el.to_string(), element_type: ELEMENT_TYPES[6].to_string() });
-         }else if el.contains("##") {
-             elements.push(Element { value: el.to_string(), element_type: ELEMENT_TYPES[3].to_string() });
-         }else {
-            elements.push(Element { value: el.to_string(), element_type: ELEMENT_TYPES[1].to_string() });
-         }
-     }
 
-     elements
+       
+        if token.contains('*') {
+            elements.push(Element {
+                value: token.to_string(),
+                element_type: ELEMENT_TYPES[6].to_string(), // Multiplication
+            });
+            continue;
+        }
+
+      
+        if token == "(" || token == ")" || token == "[" || token == "]" {
+            elements.push(Element {
+                value: token.to_string(),
+                element_type: ELEMENT_TYPES[3].to_string(), // Bracket
+            });
+            continue;
+        }
+
+       
+        let body = token.trim_start_matches(|c| c == '+' || c == '-');
+        if body.starts_with('(') && body.ends_with(')') && body.len() > 1 {
+            elements.push(Element {
+                value: token.to_string(),
+                element_type: ELEMENT_TYPES[3].to_string(), // Bracket
+            });
+            continue;
+        }
+
   
+        if token.contains('/') {
+            elements.push(Element {
+                value: token.to_string(),
+                element_type: ELEMENT_TYPES[5].to_string(), // Fraction
+            });
+            continue;
+        }
+
+    
+        if token.contains("##") {
+            elements.push(Element {
+                value: token.to_string(),
+                element_type: ELEMENT_TYPES[2].to_string(), // Exponent
+            });
+            continue;
+        }
+
+        if token.contains('^') {
+            elements.push(Element {
+                value: token.to_string(),
+                element_type: ELEMENT_TYPES[4].to_string(), // Power
+            });
+            continue;
+        }
+
+        let num_body = token.trim_start_matches(|c| c == '+' || c == '-');
+        if !num_body.is_empty() && num_body.chars().all(|c| c.is_ascii_digit() || c == '.') {
+            elements.push(Element {
+                value: token.to_string(),
+                element_type: ELEMENT_TYPES[1].to_string(), // Constant
+            });
+            continue;
+        }
+
+        
+        elements.push(Element {
+            value: token.to_string(),
+            element_type: ELEMENT_TYPES[0].to_string(), // Variable
+        });
+    }
+
+    elements
+}
 
 
+pub fn parse_equation(data:&str)->String{
+    let mut line  = data.replace(" ", "");
+  let new_line =   line.replace("+", " +").replace("-", " -");
+   
+  if line.starts_with("-") || line.starts_with("+"){
+    return new_line.to_string()[1..].to_string()
+  }else { 
+     new_line.to_string()
+  }
 }
