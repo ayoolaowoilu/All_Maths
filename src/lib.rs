@@ -4,6 +4,7 @@ pub mod equations;
 #[cfg(test)]
 mod tests {
     use crate::equations::bodmas::calculate_bodmas;
+    use crate::equations::pemdas::calculate_pemdas;
     use crate::utils::element_seperator::{identify_elements, map_elements};
 
     #[test]
@@ -89,5 +90,42 @@ mod tests {
     #[should_panic(expected = "expects an expression")]
     fn test_reject_equation() {
         calculate_bodmas("2*x +3 =10");
+    }
+
+
+     #[test]
+    fn test_pemdas_md_before_as() {
+        // 2 + 12 = 14, not (2+3)*4 = 20
+        let r = calculate_pemdas("2 +3*4");
+        assert_eq!(r.left, 14.0);
+    }
+
+    #[test]
+    fn test_pemdas_parentheses_first() {
+        // (2+3) = 5, *4 = 20
+        let r = calculate_pemdas("(2+3)*4");
+        assert_eq!(r.left, 20.0);
+    }
+
+    #[test]
+    fn test_pemdas_exponents() {
+        // 2^(3^2) = 2^9 = 512 (right-associative)
+        let r = calculate_pemdas("2^3^2");
+        assert_eq!(r.left, 512.0);
+    }
+
+    #[test]
+    fn test_equation_both_sides() {
+        let r = calculate_pemdas("2*5 +3 = 13");
+        assert!(r.is_equation);
+        assert_eq!(r.left, 13.0);
+        assert_eq!(r.right, Some(13.0));
+    }
+
+    #[test]
+    fn test_fraction_and_mult() {
+        // 16 - 0.777... + 89
+        let r = calculate_pemdas("+2*8 -7/9 +89");
+        assert!((r.left - 104.222).abs() < 0.01);
     }
 }
