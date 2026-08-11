@@ -1,7 +1,9 @@
 pub mod utils;
+pub mod equations;
 
 #[cfg(test)]
 mod tests {
+    use crate::equations::bodmas::calculate_bodmas;
     use crate::utils::element_seperator::{identify_elements, map_elements};
 
     #[test]
@@ -44,5 +46,47 @@ mod tests {
         let elements = identify_elements("+(4-8)");
         assert_eq!(elements[0].element_type, "Bracket");
         assert_eq!(elements[0].value, "+(4-8)");
+    }
+
+     fn test_bodmas_simple() {
+        assert_eq!(calculate_bodmas("-9 +89"), 80.0);
+    }
+
+    #[test]
+    fn test_bodmas_multiplication() {
+        assert_eq!(calculate_bodmas("+2*8"), 16.0);
+    }
+
+    #[test]
+    fn test_bodmas_fraction() {
+        assert!((calculate_bodmas("-7/9") - (-0.777777)).abs() < 0.0001);
+    }
+
+    #[test]
+    fn test_bodmas_brackets() {
+        assert_eq!(calculate_bodmas("+(4-8)"), -4.0);
+    }
+
+    #[test]
+    fn test_bodmas_full() {
+       
+        let result = calculate_bodmas("-9 +2*8 -7/9 +89");
+        assert!((result - 95.2222).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_bodmas_nested_bracket() {
+        assert_eq!(calculate_bodmas("2 +(3-1)"), 4.0);
+    }
+
+    #[test]
+    fn test_bodmas_bracket_mult() {
+        assert_eq!(calculate_bodmas("(2+3)*4"), 20.0);
+    }
+
+    #[test]
+    #[should_panic(expected = "expects an expression")]
+    fn test_reject_equation() {
+        calculate_bodmas("2*x +3 =10");
     }
 }

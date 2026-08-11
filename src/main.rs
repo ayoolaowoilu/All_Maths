@@ -1,4 +1,5 @@
 use crate::utils::element_seperator::map_elements;
+mod equations;
 
 mod utils;
 
