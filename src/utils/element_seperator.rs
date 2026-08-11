@@ -47,40 +47,10 @@ pub fn map_elements(equation: &str) -> MappedEquation {
     }
 }
 
-fn merge_parenthesized_tokens(raw_tokens: Vec<String>) -> Vec<String> {
-    let mut merged: Vec<String> = Vec::new();
-    let mut pending = String::new();
-    let mut depth = 0;
-
-    for raw in raw_tokens {
-        if pending.is_empty() {
-            pending = raw;
-        } else {
-            pending.push_str(&raw);
-        }
-
-        depth = pending.chars().filter(|&c| c == '(').count()
-            - pending.chars().filter(|&c| c == ')').count();
-
-        if depth <= 0 {
-            merged.push(pending.clone());
-            pending.clear();
-        }
-    }
-
-    if !pending.is_empty() {
-        merged.push(pending);
-    }
-
-    merged
-}
-
 pub fn identify_elements(equation: &str) -> Vec<Element> {
     let mut elements: Vec<Element> = Vec::new();
-    let raw_tokens: Vec<String> = equation.split_whitespace().map(|s| s.to_string()).collect();
-    let tokens = merge_parenthesized_tokens(raw_tokens);
 
-    for token in tokens {
+    for token in equation.split_whitespace() {
         if token.is_empty() {
             continue;
         }
@@ -160,12 +130,12 @@ pub fn identify_elements(equation: &str) -> Vec<Element> {
 
 
 pub fn parse_equation(data:&str)->String{
-    let line = data.replace(" ", "");
-    let new_line = line.replace("+", " +").replace("-", " -");
+    let mut line  = data.replace(" ", "");
+  let new_line =   line.replace("+", " +").replace("-", " -");
    
-    if line.starts_with("-") || line.starts_with("+"){
-        return new_line.to_string()[1..].to_string()
-    }
-
-    new_line.to_string()
+  if line.starts_with("-") || line.starts_with("+"){
+    return new_line.to_string()[1..].to_string()
+  }else { 
+     new_line.to_string()
+  }
 }
