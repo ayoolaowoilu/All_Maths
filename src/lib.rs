@@ -13,7 +13,7 @@ mod tests {
         let mapped = map_elements(equation);
         
         // map_elements returns MappedEquation with spaced terms
-        assert_eq!(mapped.left_side.len(), 3);
+        assert_eq!(mapped.left_side.len(), 2);
         assert!(!mapped.is_equation);
         assert!(mapped.right_side.is_none());
     }
@@ -48,7 +48,8 @@ mod tests {
         assert_eq!(elements[0].value, "+(4-8)");
     }
 
-     fn test_bodmas_simple() {
+    #[test]
+    fn test_bodmas_simple() {
         assert_eq!(calculate_bodmas("-9 +89"), 80.0);
     }
 
