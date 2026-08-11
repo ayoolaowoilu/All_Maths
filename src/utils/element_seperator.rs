@@ -139,3 +139,7 @@ pub fn parse_equation(data:&str)->String{
      new_line.to_string()
   }
 }
+
+pub fn equation_transformer(){
+     
+}
