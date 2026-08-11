@@ -115,7 +115,7 @@ fn parse_number(s: &str) -> Result<f64, ()> {
     s.parse::<f64>().map_err(|_| ())
 }
 
-/// Converts "2+3*4" → "2 +3*4" so map_elements() can tokenize it
+
 fn space_out_operators(expr: &str) -> String {
     let mut result = String::with_capacity(expr.len() * 2);
     let chars: Vec<char> = expr.chars().collect();
