@@ -21,6 +21,7 @@ pub struct MappedEquation {
 
 pub fn map_elements(equation: &str) -> MappedEquation {
     let clean = &parse_equation(equation.trim());
+    println!("DEBUG map_elements input='{}' clean='{}'", equation, clean);
     
     if clean.starts_with('*') || clean.starts_with('/') {
         panic!("Equation cannot start with * or /");
@@ -130,16 +131,39 @@ pub fn identify_elements(equation: &str) -> Vec<Element> {
 
 
 pub fn parse_equation(data:&str)->String{
-    let mut line  = data.replace(" ", "");
-  let new_line =   line.replace("+", " +").replace("-", " -");
-   
-  if line.starts_with("-") || line.starts_with("+"){
-    return new_line.to_string()[1..].to_string()
-  }else { 
-     new_line.to_string()
-  }
-}
+    let mut output = String::new();
+    let mut depth = 0;
+    let mut prev: Option<char> = None;
 
-pub fn equation_transformer(){
-    
+    for c in data.chars().filter(|c| !c.is_whitespace()) {
+        match c {
+            '(' => {
+                depth += 1;
+                output.push(c);
+            }
+            ')' => {
+                if depth > 0 {
+                    depth -= 1;
+                }
+                output.push(c);
+            }
+            '+' | '-' if depth == 0 => {
+                let unary = prev.is_none() || matches!(prev.unwrap(), '+' | '-' | '*' | '/' | '^' | '(' | '=' );
+                if unary {
+                    output.push(c);
+                } else {
+                    if !output.ends_with(' ') && !output.is_empty() {
+                        output.push(' ');
+                    }
+                    output.push(c);
+                }
+            }
+            _ => {
+                output.push(c);
+            }
+        }
+        prev = Some(c);
+    }
+
+    output.trim().to_string()
 }

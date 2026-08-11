@@ -1,4 +1,4 @@
-use crate::utils::element_seperator::{map_elements, Element};
+use crate::utils::{element_seperator::map_elements, transform_equation::{Tok, tokenize}};
 
 pub struct PemdasResult {
     pub left: f64,
@@ -6,129 +6,134 @@ pub struct PemdasResult {
     pub is_equation: bool,
 }
 
+
 pub fn calculate_pemdas(equation: &str) -> PemdasResult {
-    let mapped = map_elements(equation);
-    
-    PemdasResult {
-        left: evaluate_side(&mapped.left_side),
-        right: mapped.right_side.as_ref().map(|side| evaluate_side(side)),
-        is_equation: mapped.is_equation,
-    }
-}
+    let trimmed = equation.trim();
+    let is_eq = map_elements(equation).is_equation;
 
-
-fn evaluate_side(elements: &[Element]) -> f64 {
-    elements.iter().map(|el| evaluate_term(el)).sum()
-}
-
-fn evaluate_term(el: &Element) -> f64 {
-    let (sign, body) = split_sign(&el.value);
-    
-    let magnitude = match el.element_type.as_str() {
-        // P - Parentheses: recurse into the bracket
-        "Bracket" => {
-            let inner = body.trim_start_matches('(').trim_end_matches(')');
-            let spaced = space_out_operators(inner);
-            evaluate_side(&map_elements(&spaced).left_side)
+    if is_eq {
+        let parts: Vec<&str> = trimmed.splitn(2, '=').collect();
+        PemdasResult {
+            left: eval_expression(parts[0].trim()),
+            right: Some(eval_expression(parts[1].trim())),
+            is_equation: true,
         }
-        
-        // E - Exponents / Powers
-        "Power" => eval_binary_op(body, "^", |a, b| a.powf(b)),
-        "Exponent" => eval_binary_op(body, "##", |a, b| a.powf(b)),
-        
-        // MD - Multiplication / Division (left-to-right)
-        "Multiplication" => eval_left_to_right(body, '*', |a, b| a * b),
-        "Fraction" => eval_left_to_right(body, '/', |a, b| a / b),
-        
-        // Single number
-        "Constant" => parse_number(body).unwrap_or(0.0),
-        
-        // Variables without numbers (like x, y) — treat as 0 for pure evaluation
-        // or panic if you want strict numeric evaluation
-        "Variable" => parse_number(body).unwrap_or(0.0),
-        
-        _ => 0.0,
-    };
-    
-    sign * magnitude
-}
-
-/// Pulls leading + or - off a term
-fn split_sign(s: &str) -> (f64, &str) {
-    if s.starts_with('-') {
-        (-1.0, &s[1..])
-    } else if s.starts_with('+') {
-        (1.0, &s[1..])
     } else {
-        (1.0, s)
+        PemdasResult {
+            left: eval_expression(trimmed),
+            right: None,
+            is_equation: false,
+        }
     }
 }
 
-/// Evaluates operators left-to-right (for * and /)
-fn eval_left_to_right(body: &str, op: char, operation: fn(f64, f64) -> f64) -> f64 {
-    let parts: Vec<&str> = body.split(op).collect();
-    if parts.is_empty() {
-        return parse_number(body).unwrap_or(0.0);
-    }
-    
-    let mut result = parse_or_eval(parts[0]);
-    for part in &parts[1..] {
-        result = operation(result, parse_or_eval(part));
-    }
-    result
+
+
+struct Evaluator {
+    tokens: Vec<Tok>,
+    pos: usize,
 }
 
-/// For ^ and ## (right-associative: 2^3^2 = 2^(3^2) = 512)
-fn eval_binary_op(body: &str, op: &str, operation: fn(f64, f64) -> f64) -> f64 {
-    let parts: Vec<&str> = body.split(op).collect();
-    if parts.len() < 2 {
-        return parse_or_eval(body);
+impl Evaluator {
+    fn new(tokens: Vec<Tok>) -> Self {
+        Evaluator { tokens, pos: 0 }
     }
-    
-    // Right-associative: fold from the right
-    let mut result = parse_or_eval(parts.last().unwrap());
-    for part in parts[..parts.len()-1].iter().rev() {
-        result = operation(parse_or_eval(part), result);
+
+    fn peek(&self) -> &Tok {
+        self.tokens.get(self.pos).unwrap_or(&Tok::EOF)
     }
-    result
-}
 
-/// Tries to parse a number, recurses if it's a bracket or sub-expression
-fn parse_or_eval(s: &str) -> f64 {
-    let trimmed = s.trim();
-    
-    // Nested brackets like (2+3)
-    if trimmed.starts_with('(') && trimmed.ends_with(')') {
-        let inner = &trimmed[1..trimmed.len()-1];
-        let spaced = space_out_operators(inner);
-        return evaluate_side(&map_elements(&spaced).left_side);
+    fn advance(&mut self) -> Tok {
+        let t = self.tokens[self.pos].clone();
+        if self.pos < self.tokens.len() - 1 { self.pos += 1; }
+        t
     }
-    
-    parse_number(trimmed).unwrap_or_else(|_| {
-        // Not a plain number — might be an expression without spaces
-        let spaced = space_out_operators(trimmed);
-        evaluate_side(&map_elements(&spaced).left_side)
-    })
-}
 
-fn parse_number(s: &str) -> Result<f64, ()> {
-    s.parse::<f64>().map_err(|_| ())
-}
+    fn eval(&mut self) -> f64 {
+        self.parse_expr()
+    }
 
-
-fn space_out_operators(expr: &str) -> String {
-    let mut result = String::with_capacity(expr.len() * 2);
-    let chars: Vec<char> = expr.chars().collect();
-    
-    for (i, &c) in chars.iter().enumerate() {
-        // Space before binary + or - (not unary at start)
-        if i > 0 && (c == '+' || c == '-') {
-            let prev = chars[i - 1];
-            if prev.is_ascii_digit() || prev == ')' || prev == ']' {
-                result.push(' ');
+    // expr = term { (+|-) term }
+    fn parse_expr(&mut self) -> f64 {
+        let mut left = self.parse_term();
+        while matches!(self.peek(), Tok::Plus | Tok::Minus) {
+            match self.advance() {
+                Tok::Plus => left += self.parse_term(),
+                Tok::Minus => left -= self.parse_term(),
+                _ => break,
             }
         }
-        result.push(c);
+        left
     }
-    result
+
+    // term = power { (*|/) power }   (left-to-right)
+    fn parse_term(&mut self) -> f64 {
+        let mut left = self.parse_power();
+        while matches!(self.peek(), Tok::Mul | Tok::Div) {
+            match self.advance() {
+                Tok::Mul => left *= self.parse_power(),
+                Tok::Div => left /= self.parse_power(),
+                _ => break,
+            }
+        }
+        left
+    }
+
+    // power = unary [ ^ power ]   (right-associative: 2^3^2 = 2^(3^2) = 512)
+    fn parse_power(&mut self) -> f64 {
+        let left = self.parse_unary();
+        if matches!(self.peek(), Tok    ::Pow) {
+            self.advance();
+            let right = self.parse_power(); // right-assoc!
+            left.powf(right)
+        } else {
+            left
+        }
+    }
+
+    // unary = (-) unary | factor
+    fn parse_unary(&mut self) -> f64 {
+        if matches!(self.peek(), Tok::Minus) {
+            self.advance();
+            -self.parse_unary()
+        } else if matches!(self.peek(), Tok::Plus) {
+            self.advance();
+            self.parse_unary()
+        } else {
+            self.parse_factor()
+        }
+    }
+
+    // factor = number | ( expr ) | implicit_mul
+    fn parse_factor(&mut self) -> f64 {
+        match self.peek() {
+            Tok::Number(n) => {
+                let val = *n;
+                self.advance();
+                // Implicit multiplication: 2(3+4) or 2x (x becomes 0)
+                if self.is_factor_next() { val * self.parse_factor() } else { val }
+            }
+            Tok::LParen => {
+                self.advance();
+                let val = self.parse_expr();
+                if matches!(self.peek(), Tok::RParen) { self.advance(); }
+                // Implicit multiplication: (2+3)(4+5) or (2+3)4
+                if self.is_factor_next() { val * self.parse_factor() } else { val }
+            }
+            _ => {
+                self.advance();
+                0.0
+            }
+        }
+    }
+
+    fn is_factor_next(&self) -> bool {
+       return matches!(self.peek(), Tok::Number(_) | Tok::LParen)
+    }
+}
+
+fn eval_expression(expr: &str) -> f64 {
+    let tokens = tokenize(expr);
+    let mut ev = Evaluator::new(tokens);
+    ev.eval()
 }
