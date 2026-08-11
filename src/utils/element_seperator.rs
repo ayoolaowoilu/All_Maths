@@ -141,5 +141,5 @@ pub fn parse_equation(data:&str)->String{
 }
 
 pub fn equation_transformer(){
-     
+    
 }
