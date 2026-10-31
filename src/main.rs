@@ -1,38 +1,32 @@
-use crate::equations::{ pemdas::calculate_pemdas};
-use crate::utils::element_seperator::map_elements;
+use crate::ast::parser::{parse , show};
 
-mod equations;
-mod utils;
 
+
+mod ast;
 fn main() {
-    println!("Hello, world!");
-   let el =  map_elements("-5x + 4*67 + 90 - 90+9/2 = 10");
+    let inputs = [
+        "2 + 3 * 4",
+        "10 - 3 - 2",
+        "8 / 2 / 2",
+        "-x^2",
+        "2^-x",
+        "2^3^2",
+        "9x^2 - 4",
+        "2(x + 1)",
+        "sin(x)^2 + cos(x)^2",
+        "log(x, 2)",
+        "x^2 = 4",
+        "(9x - 5^x)/(4x + 8)^x + e^x",
+    ];
+    for s in inputs {
+        match parse(s) {
+            Ok(tree) => println!("{:<32} =>  {}", s, show(&tree)),
+            Err(msg) => println!("{:<32} =>  ERROR: {}", s, msg),
+        }
+    }
 
-  for e in el.left_side.iter() {
-    println!("Left side element: {} of type {}", e.value, e.element_type);
-  }
-  for e in el.right_side.as_ref().unwrap_or(&vec![]).iter() {
-    println!("Right side element: {} of type {}", e.value, e.element_type);
-  }
- 
 
-    let result = calculate_pemdas("-5 + 4*67 + 90 - 90+9/2 = 92");
-    println!(
-        "Calculate: {} | left = {} | right = {:?} | is_equation = {}",
-        "-5 + 4*67 + 90 - 90+9/2 = 92",
-        result.left,
-        result.right,
-        result.is_equation,
-    );
-
-    let result2 = calculate_pemdas("(6-4)^(2/3) + 2/90");
-    println!(
-        "Calculate: {} | left = {} | right = {:?} | is_equation = {}",
-        "(6-4)^(2/3)",
-        result2.left,
-        result2.right,
-        result2.is_equation,
-    );
+    for s in ["2 +", "(x", "x)", "2 3", "sin x", "x = = 3", "ln()", "2 $ 3"] {
+        println!("{:<32} =>  {:?}", s, parse(s).map(|t| show(&t)));
+    }
 }
-
-
