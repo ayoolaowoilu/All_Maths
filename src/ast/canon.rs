@@ -1,4 +1,4 @@
-use crate::ast::Expr;
+use crate::ast::parser::Expr;
 
 pub fn canon(e: &Expr) -> Expr {
     match e {

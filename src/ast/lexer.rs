@@ -40,10 +40,10 @@ impl fmt::Display for LexError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.kind {
             LexErrorKind::UnexpectedChar(c) => {
-                write!(f, "unexpected character '{}' at position {}", c, self.pos)
+             return   write!(f, "unexpected character '{}' at position {}", c, self.pos)
             }
             LexErrorKind::MalformedNumber(s) => {
-                write!(f, "malformed number '{}' at position {}", s, self.pos)
+           return     write!(f, "malformed number '{}' at position {}", s, self.pos)
             }
         }
     }
